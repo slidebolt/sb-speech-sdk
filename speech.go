@@ -17,6 +17,7 @@ import (
 const (
 	SubjectStart          = "speech.sessions.start"
 	SubjectStop           = "speech.sessions.stop"
+	SubjectSay            = "speech.sessions.say"
 	SubjectServiceStarted = "speech.service.started"
 )
 
@@ -66,9 +67,30 @@ type StopReply struct {
 }
 
 // Event types.
+// MaxSayLength is the longest text one Say request may speak.
+const MaxSayLength = 600
+
+// SayRequest speaks text into a session, back to the sender of its audio.
+// Saying something new interrupts anything still being spoken.
+type SayRequest struct {
+	SessionID string `json:"sessionId"`
+	Text      string `json:"text"`
+}
+
+// SayReply accepts or refuses a SayRequest. Seq identifies the utterance in the
+// speaking and spoken events that follow.
+type SayReply struct {
+	Seq   int    `json:"seq,omitempty"`
+	Error string `json:"error,omitempty"`
+}
+
 const (
 	EventTranscript = "transcript"
 	EventError      = "error"
+	// EventSpeaking and EventSpoken bracket one utterance from Say. Text is
+	// what is being said; EventSpoken carries Error if it could not be finished.
+	EventSpeaking = "speaking"
+	EventSpoken   = "spoken"
 )
 
 // Event reports progress on a session.
@@ -112,6 +134,19 @@ func (c *Client) Stop(sessionID string) error {
 		return errors.New(reply.Error)
 	}
 	return nil
+}
+
+// Say speaks text into a session. It returns once the request is accepted; the
+// speaking and spoken events report progress.
+func (c *Client) Say(sessionID, text string) (int, error) {
+	var reply SayReply
+	if err := c.request(SubjectSay, SayRequest{SessionID: sessionID, Text: text}, &reply); err != nil {
+		return 0, err
+	}
+	if reply.Error != "" {
+		return 0, errors.New(reply.Error)
+	}
+	return reply.Seq, nil
 }
 
 // OnEvent subscribes to one session's events.
