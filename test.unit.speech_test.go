@@ -53,3 +53,18 @@ func TestSayRoundTrip(t *testing.T) {
 		t.Fatalf("Say refused: got %v", err)
 	}
 }
+
+func TestSupportedInput(t *testing.T) {
+	ok := []Input{{InputRTP, CodecPCMU, 8000}, {InputRTP, CodecG722, 16000}}
+	bad := []Input{{"rtsp", CodecPCMU, 8000}, {InputRTP, CodecPCMU, 16000}, {InputRTP, CodecG722, 8000}, {InputRTP, "opus", 48000}}
+	for _, in := range ok {
+		if !SupportedInput(in) {
+			t.Errorf("%+v should be supported", in)
+		}
+	}
+	for _, in := range bad {
+		if SupportedInput(in) {
+			t.Errorf("%+v should not be supported", in)
+		}
+	}
+}

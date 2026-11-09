@@ -21,11 +21,28 @@ const (
 	SubjectServiceStarted = "speech.service.started"
 )
 
-// Input types and codecs.
+// Input types and codecs. An RTP input is either CodecPCMU at 8000 Hz
+// (telephone quality, payload type 0) or CodecG722 at 16000 Hz (wideband HD
+// voice, payload type 9). Speech sent back with Say uses the same codec.
 const (
 	InputRTP  = "rtp"
 	CodecPCMU = "pcmu"
+	CodecG722 = "g722"
 )
+
+// SupportedInput reports whether sb-speech accepts an input.
+func SupportedInput(in Input) bool {
+	if in.Type != InputRTP {
+		return false
+	}
+	switch in.Codec {
+	case CodecPCMU:
+		return in.SampleRate == 8000
+	case CodecG722:
+		return in.SampleRate == 16000
+	}
+	return false
+}
 
 const requestTimeout = 5 * time.Second
 
